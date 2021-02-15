@@ -1,14 +1,4 @@
 """
-Name:           monitor_internet_connection.py
-Author:         Martin F. O'Connor (C)
-Description:    Monitor Internet connectivity and record time and duration 
-                of any downtime.
-
-How to run:		To run this program from the Console/Terminal, type:
-					python monitor_internet_connection.py
-
-Date:           23rd June 2019
-Version:        1.0
 
 This program checks every X (5) seconds whether the Internet connection
 is alive and an external IP address is reachable.
@@ -25,22 +15,6 @@ Version:        1.1
 
 Added functionality to capture Ctrl-C (and SIGINT) and exit the program
 gracefully.
-
-
-Date:           15th January 2020
-Version:        1.1.3
-
-Updates:
-    1.  Made available as a public package called 'monitor internet connection'.
-        on the Python Package Index https://pypi.org/
-
-    2.  Greatly simplified the installation instructions.
-        To install: pip install monitor_internet_connection
-        To run:     python -m monitor_internet_connection
-
-
-Date:           16th January 2020
-Version:        1.2.0
 
 Updates:
     1. Added the argparse library.
@@ -67,6 +41,7 @@ import os
 import signal
 import argparse
 import sys
+import http.client, urllib
 
 # If enabled, the log file will be created in the current working folder.
 log_filename = "internet_monitor.log"
@@ -94,7 +69,7 @@ def parse_args(args=sys.argv[1:]):
 
 
 
-def is_internet_alive(host="8.8.8.8", port=53, timeout=3):
+def is_internet_alive(host="1.1.1.1", port=53, timeout=3):
     """Check if Internet Connection is alive and external IP address is reachable.
 
     Input Parameters:
@@ -155,6 +130,15 @@ def signal_handler(signal_received, frame):
         with open(file, 'a') as writer:
             writer.write(exit_msg + "\n")
 
+    conn = http.client.HTTPSConnection("api.pushover.net:443")
+    conn.request("POST", "/1/messages.json",
+                 urllib.parse.urlencode({
+                     "token": "a5vbjzhr5bmjvs1eprqezonrten13i",
+                     "user": "ucm2sqz311cxcgbydfxz8ftomnatgn",
+                     "message": exit_msg,
+                 }), {"Content-type": "application/x-www-form-urlencoded"})
+    conn.getresponse()
+    time.sleep(5)
     sys.exit()
 
 
@@ -188,6 +172,14 @@ def monitor_inet_connection(enable_logfile = True, polling_freq = 1):
     msg = "Monitoring Internet Connection commencing : " + str(now).split(".")[0] + \
             " polling every " + str(polling_freq) + " second(s)"
     print(msg)
+    conn = http.client.HTTPSConnection("api.pushover.net:443")
+    conn.request("POST", "/1/messages.json",
+                 urllib.parse.urlencode({
+                     "token": "a5vbjzhr5bmjvs1eprqezonrten13i",
+                     "user": "ucm2sqz311cxcgbydfxz8ftomnatgn",
+                     "message": msg,
+                 }), {"Content-type": "application/x-www-form-urlencoded"})
+    conn.getresponse()
 
     if enable_logfile:
         with open(file, 'a') as writer:
@@ -232,6 +224,15 @@ def monitor_inet_connection(enable_logfile = True, polling_freq = 1):
             # Calculate the total duration of the downtime
             downtime_duration = calc_time_diff(fail_time, restore_time)
             duration_msg = "-------The duration of the downtime was   :             " + downtime_duration
+
+            conn = http.client.HTTPSConnection("api.pushover.net:443")
+            conn.request("POST", "/1/messages.json",
+                         urllib.parse.urlencode({
+                             "token": "a5vbjzhr5bmjvs1eprqezonrten13i",
+                             "user": "ucm2sqz311cxcgbydfxz8ftomnatgn",
+                             "message": restore_msg + "\n" + duration_msg,
+                         }), {"Content-type": "application/x-www-form-urlencoded"})
+            conn.getresponse()
 
             # Display restoration message to console and record in log file.
             print(restore_msg)
